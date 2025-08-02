@@ -1,0 +1,6 @@
+[package]
+name = "certificate_zk"
+type = "bin"
+authors = [""]
+
+[dependencies]
