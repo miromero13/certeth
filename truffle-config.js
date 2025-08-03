@@ -41,10 +41,10 @@
  * https://trufflesuite.com/docs/truffle/getting-started/using-the-truffle-dashboard/
  */
 
-// require('dotenv').config();
-// const { MNEMONIC, PROJECT_ID } = process.env;
+require('dotenv').config();
+const { MNEMONIC } = process.env;
 
-// const HDWalletProvider = require('@truffle/hdwallet-provider');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 module.exports = {
   /**
@@ -64,10 +64,23 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    development: {
-     host: "127.0.0.1",     // Localhost (default: none)
-     port: 7545,            // Ganache default port
-     network_id: "*",       // Any network (default: none)
+    // development: {
+    //  host: "127.0.0.1",     // Localhost (default: none)
+    //  port: 7545,            // Ganache default port
+    //  network_id: "*",       // Any network (default: none)
+    // },
+    
+    // Arbitrum Sepolia configuration
+    arbitrumSepolia: {
+      provider: () => new HDWalletProvider(MNEMONIC, 'https://sepolia-rollup.arbitrum.io/rpc'),
+      network_id: 421614,      // Arbitrum Sepolia network id
+      gas: 20000000,           // Gas limit
+      gasPrice: 1000000000,    // 1 gwei
+      confirmations: 2,        // # of confirmations to wait between deployments
+      timeoutBlocks: 200,      // # of blocks before a deployment times out
+      skipDryRun: true,        // Skip dry run before migrations
+      networkCheckTimeout: 10000,
+      deploymentPollingInterval: 8000
     },
     //
     // An additional network, but with some advanced options…

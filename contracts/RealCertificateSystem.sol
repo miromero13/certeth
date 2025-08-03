@@ -8,21 +8,6 @@ import "./MockEAS.sol";
  * @dev Sistema de verificación real de certificados que valida datos reales
  */
 contract RealCertificateVerificationSystem {
-    // Estructuras para EAS
-    struct AttestationRequest {
-        bytes32 schema;
-        AttestationRequestData data;
-    }
-
-    struct AttestationRequestData {
-        address recipient;
-        uint64 expirationTime;
-        bool revocable;
-        bytes32 refUID;
-        bytes data;
-        uint256 value;
-    }
-
     // Estados de verificación
     enum VerificationStatus {
         PENDING,
@@ -186,9 +171,9 @@ contract RealCertificateVerificationSystem {
             certHash
         );
 
-        AttestationRequest memory req = AttestationRequest({
+        MockEAS.AttestationRequest memory req = MockEAS.AttestationRequest({
             schema: keccak256("certificate_v1"),
-            data: AttestationRequestData({
+            data: MockEAS.AttestationRequestData({
                 recipient: _recipient,
                 expirationTime: uint64(block.timestamp + 365 * 24 * 60 * 60), // 1 año
                 revocable: true,

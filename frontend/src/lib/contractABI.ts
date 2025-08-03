@@ -676,4 +676,5 @@ export const SIMPLE_CERTIFICATE_ABI = [
   }
 ];
 
-export const CONTRACT_ADDRESS = '0x784023424e92F809A9C28b74943a55eba0b9583E';
+// SimpleCertificateSystem deployed on Arbitrum Sepolia
+export const CONTRACT_ADDRESS = '0xd5d1bF8F538769Ed2b0421B85A638B7C2d18cF32';

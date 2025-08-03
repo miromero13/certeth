@@ -93,9 +93,10 @@ export const CERTIFICATES_CONTRACT_ABI = [
   }
 ];
 
-// Contract addresses - these would be set after deployment
+// Contract addresses - deployed on Arbitrum Sepolia
 export const CONTRACT_ADDRESSES = {
-  CERTIFICATES_CONTRACT: "0x...", // Replace with actual deployed address
-  MOCK_EAS: "0x...", // Replace with actual deployed address
-  SCHEMA_REGISTRY: "0x..." // Replace with actual deployed address
+  CERTIFICATES_CONTRACT: "0x3FC85d298d55b17253F62A2Be4198A53308E84B2", // CertificatesContract
+  SIMPLE_CERTIFICATE_SYSTEM: "0xd5d1bF8F538769Ed2b0421B85A638B7C2d18cF32", // SimpleCertificateSystem
+  MOCK_EAS: "0x395606843558787D30608B1504B4379285d36E0a", // MockEAS
+  SCHEMA_REGISTRY: "0x741aaF4918702417e6ed06b4c60719F1DBda4BB1" // MockSchemaRegistry
 };

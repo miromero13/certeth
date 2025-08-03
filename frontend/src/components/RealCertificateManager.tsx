@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Web3 from 'web3';
 import { SIMPLE_CERTIFICATE_ABI, CONTRACT_ADDRESS } from '@/lib/contractABI';
+import { switchToArbitrumSepolia, isCorrectNetwork, getCurrentNetworkName } from '@/lib/networkConfig';
+import { DEPLOYMENT_CONFIG } from '@/lib/deploymentConfig';
 
 // Interfaces reales
 interface Certificate {
@@ -59,6 +61,10 @@ export const RealCertificateManager = ({ className }: RealCertificateManagerProp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [networkStatus, setNetworkStatus] = useState<{
+    isCorrect: boolean;
+    currentNetwork: string;
+  }>({ isCorrect: false, currentNetwork: 'Desconocida' });
 
   // Estados para formularios
   const [issueForm, setIssueForm] = useState({
@@ -96,6 +102,13 @@ export const RealCertificateManager = ({ className }: RealCertificateManagerProp
     initializeWeb3();
   }, []);
 
+  // Verificar red cuando se conecta la cuenta
+  useEffect(() => {
+    if (currentAccount) {
+      checkNetwork();
+    }
+  }, [currentAccount]);
+
   const initializeWeb3 = async () => {
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       const web3Instance = new Web3((window as any).ethereum);
@@ -127,9 +140,45 @@ export const RealCertificateManager = ({ className }: RealCertificateManagerProp
         method: 'eth_requestAccounts',
       });
       setCurrentAccount(accounts[0]);
+      
+      // Verificar red
+      await checkNetwork();
+      
       setSuccess('Wallet conectada exitosamente');
     } catch (error) {
       setError('Error conectando wallet: ' + (error as any).message);
+    }
+  };
+
+  // Función para verificar y cambiar red
+  const checkNetwork = async () => {
+    try {
+      const isCorrect = await isCorrectNetwork();
+      const currentNetwork = await getCurrentNetworkName();
+      
+      setNetworkStatus({
+        isCorrect,
+        currentNetwork
+      });
+
+      if (!isCorrect) {
+        setError(`⚠️ Red incorrecta: Estás conectado a ${currentNetwork}. 
+        
+El sistema requiere Arbitrum Sepolia para funcionar correctamente.`);
+      }
+    } catch (error) {
+      console.error('Error verificando red:', error);
+    }
+  };
+
+  // Función para cambiar a Arbitrum Sepolia
+  const handleSwitchNetwork = async () => {
+    try {
+      await switchToArbitrumSepolia();
+      await checkNetwork();
+      setSuccess('Red cambiada a Arbitrum Sepolia exitosamente');
+    } catch (error) {
+      setError('Error cambiando red: ' + (error as any).message);
     }
   };
 
@@ -447,20 +496,45 @@ ${errorMessage}
 
   // Cargar certificados
   const loadCertificates = async () => {
-    if (!contract) return;
+    if (!contract) {
+      console.log('❌ No hay contrato inicializado');
+      return;
+    }
+
+    if (!networkStatus.isCorrect) {
+      console.log('❌ Red incorrecta, no se pueden cargar certificados');
+      setError('Cambia a Arbitrum Sepolia para ver los certificados');
+      return;
+    }
 
     try {
+      console.log('📋 Cargando certificados desde:', CONTRACT_ADDRESS);
+      console.log('🌐 Red:', DEPLOYMENT_CONFIG.network.name);
+      
       const counter = await contract.methods.getCertificateCounter().call();
       const totalCerts = parseInt(counter);
       
+      console.log(`📊 Total de certificados en el contrato: ${totalCerts}`);
+      
+      if (totalCerts === 0) {
+        console.log('ℹ️ No hay certificados emitidos aún');
+        setCertificates([]);
+        setUserCertificates([]);
+        return;
+      }
+      
       const certs: Certificate[] = [];
       
-      for (let i = 1; i <= Math.min(totalCerts, 10); i++) {
+      // Cargar máximo 20 certificados más recientes
+      const startId = Math.max(1, totalCerts - 19);
+      
+      for (let i = startId; i <= totalCerts; i++) {
         try {
+          console.log(`🔍 Cargando certificado ${i}...`);
           const cert = await contract.methods.getCertificate(i).call();
           
-          if (cert.id !== '0') {
-            certs.push({
+          if (cert.id !== '0' && cert.isValid) {
+            const certificateData: Certificate = {
               id: parseInt(cert.id),
               recipientName: cert.recipientName,
               institutionName: cert.institutionName,
@@ -474,13 +548,19 @@ ${errorMessage}
               certificateHash: cert.certificateHash,
               easUID: cert.easUID,
               isValid: cert.isValid
-            });
+            };
+            
+            certs.push(certificateData);
+            console.log(`✅ Certificado ${i} cargado:`, certificateData.courseName);
+          } else {
+            console.log(`⚠️ Certificado ${i} inválido o vacío`);
           }
-        } catch (error) {
-          console.warn(`No se pudo cargar el certificado ${i}:`, error);
+        } catch (certError) {
+          console.warn(`❌ No se pudo cargar el certificado ${i}:`, certError);
         }
       }
 
+      console.log(`📊 ${certs.length} certificados cargados exitosamente`);
       setCertificates(certs);
       
       // Filtrar certificados del usuario actual
@@ -488,18 +568,31 @@ ${errorMessage}
         const userCerts = certs.filter(cert => 
           cert.recipient.toLowerCase() === currentAccount.toLowerCase()
         );
+        console.log(`👤 Certificados del usuario ${currentAccount.slice(0, 6)}...${currentAccount.slice(-4)}: ${userCerts.length}`);
         setUserCertificates(userCerts);
       }
+      
+      if (certs.length > 0) {
+        setSuccess(`✅ ${certs.length} certificados cargados desde Arbitrum Sepolia`);
+      }
+      
     } catch (error) {
-      console.error('Error cargando certificados:', error);
+      console.error('❌ Error cargando certificados:', error);
+      setError(`Error cargando certificados: ${(error as any).message || 'Error desconocido'}
+      
+🔧 Posibles soluciones:
+• Verifica que estés en Arbitrum Sepolia
+• Asegúrate de que el contrato esté desplegado
+• Revisa la consola del navegador para más detalles`);
     }
   };
 
   useEffect(() => {
-    if (contract && currentAccount) {
+    if (contract && currentAccount && networkStatus.isCorrect) {
+      console.log('🔄 Cargando certificados automáticamente...');
       loadCertificates();
     }
-  }, [contract, currentAccount]);
+  }, [contract, currentAccount, networkStatus.isCorrect]);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString();
@@ -513,11 +606,16 @@ ${errorMessage}
   if (!currentAccount) {
     return (
       <Card className={`p-6 ${className}`}>
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <h3 className="text-lg font-medium mb-2">Sistema Real de Certificados Blockchain</h3>
           <p className="text-gray-600 mb-4">
             Sistema de verificación real con validaciones cryptográficas, EAS y reputación de emisores
           </p>
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
+            <strong>🌐 Red Requerida:</strong> Arbitrum Sepolia<br />
+            <strong>📡 RPC URL:</strong> https://sepolia-rollup.arbitrum.io/rpc<br />
+            <strong>🔗 Chain ID:</strong> 421614
+          </div>
           <Button onClick={connectWallet}>
             Conectar Wallet
           </Button>
@@ -544,7 +642,24 @@ ${errorMessage}
                 <p className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
                   {currentAccount?.slice(0, 6)}...{currentAccount?.slice(-4)}
                 </p>
+                <div className={`text-xs mt-1 px-2 py-1 rounded ${
+                  networkStatus.isCorrect 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  🌐 {networkStatus.currentNetwork}
+                </div>
               </div>
+              {!networkStatus.isCorrect && (
+                <Button 
+                  onClick={handleSwitchNetwork}
+                  variant="default"
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  🔄 Cambiar a Arbitrum
+                </Button>
+              )}
               <Button 
                 onClick={connectWallet}
                 variant="outline"
@@ -902,35 +1017,114 @@ ${errorMessage}
         </>
       )}
 
-      {/* Lista de certificados */}
-      {/* {certificates.length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">📋 Certificados en el Sistema</h3>
+      {/* Panel de Control de Certificados */}
+      {/* <Card className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">📋 Certificados en Arbitrum Sepolia</h3>
+          <div className="flex gap-2">
+            <Button 
+              onClick={loadCertificates}
+              variant="outline"
+              size="sm"
+              disabled={loading || !networkStatus.isCorrect}
+            >
+              🔄 Recargar Certificados
+            </Button>
+            {certificates.length > 0 && (
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                {certificates.length} certificados
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!networkStatus.isCorrect ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-2">⚠️ Red incorrecta</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Cambia a Arbitrum Sepolia para ver los certificados
+            </p>
+            <Button onClick={handleSwitchNetwork} size="sm">
+              🔄 Cambiar a Arbitrum Sepolia
+            </Button>
+          </div>
+        ) : certificates.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-2">📄 No hay certificados disponibles</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Los certificados emitidos aparecerán aquí automáticamente
+            </p>
+            <div className="text-xs text-gray-400 space-y-1">
+              <div><strong>Contrato:</strong> {CONTRACT_ADDRESS}</div>
+              <div><strong>Red:</strong> {DEPLOYMENT_CONFIG.network.name}</div>
+            </div>
+          </div>
+        ) : (
           <div className="grid gap-4">
             {certificates.map((cert) => (
-              <div key={cert.id} className="p-4 border rounded-lg">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium">{cert.courseName}</h4>
-                  <span className={`px-2 py-1 text-xs rounded ${
-                    cert.isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {cert.isValid ? 'Válido' : 'Inválido'}
-                  </span>
+              <div key={cert.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-medium text-lg">{cert.courseName}</h4>
+                    <p className="text-sm text-gray-600">{cert.institutionName}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`px-2 py-1 text-xs rounded mb-2 block ${
+                      cert.isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {cert.isValid ? '✅ Válido' : '❌ Inválido'}
+                    </span>
+                    <div className="text-xl font-bold text-blue-600">
+                      {cert.grade}/100
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <div><strong>ID:</strong> {cert.id}</div>
-                  <div><strong>Titular:</strong> {cert.recipientName}</div>
-                  <div><strong>Institución:</strong> {cert.institutionName}</div>
-                  <div><strong>Grado:</strong> {cert.grade}/100</div>
-                  <div><strong>Completado:</strong> {formatDate(cert.completionDate)}</div>
-                  <div><strong>Emitido:</strong> {formatDate(cert.issuedAt)}</div>
-                  <div><strong>Hash:</strong> <span className="font-mono text-xs">{cert.certificateHash}</span></div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div><strong>🆔 ID:</strong> {cert.id}</div>
+                    <div><strong>👤 Titular:</strong> {cert.recipientName}</div>
+                    <div><strong>📚 Curso:</strong> {cert.courseName}</div>
+                    {cert.description && (
+                      <div><strong>📝 Descripción:</strong> {cert.description}</div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div><strong>✅ Completado:</strong> {formatDate(cert.completionDate)}</div>
+                    <div><strong>📅 Emitido:</strong> {formatDate(cert.issuedAt)}</div>
+                    <div><strong>🏫 Emisor:</strong> 
+                      <span className="font-mono text-xs ml-1">
+                        {cert.issuer.slice(0, 6)}...{cert.issuer.slice(-4)}
+                      </span>
+                    </div>
+                    <div><strong>🎓 Destinatario:</strong> 
+                      <span className="font-mono text-xs ml-1">
+                        {cert.recipient.slice(0, 6)}...{cert.recipient.slice(-4)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t">
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-gray-500">
+                      <strong>🔗 Hash:</strong> 
+                      <span className="font-mono ml-1">{cert.certificateHash.slice(0, 16)}...</span>
+                    </div>
+                    <Button
+                      onClick={() => window.open(`${DEPLOYMENT_CONFIG.network.explorer}/tx/${cert.certificateHash}`, '_blank')}
+                      variant="outline"
+                      size="sm"
+                    >
+                      🔍 Ver en Explorer
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </Card>
-      )} */}
+        )}
+      </Card> */}
     </div>
   );
 };

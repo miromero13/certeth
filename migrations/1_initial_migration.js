@@ -29,9 +29,9 @@ module.exports = async function (deployer, network) {
 
   let easAddress, schemaRegistryAddress;
 
-  if (network === 'development' || network === 'test') {
-    // Para desarrollo local, deployar mocks
-    console.log("Deploying MockEAS and MockSchemaRegistry for local development...");
+  if (network === 'development' || network === 'test' || network === 'arbitrumSepolia') {
+    // Para desarrollo local y Arbitrum Sepolia, deployar mocks
+    console.log("Deploying MockEAS and MockSchemaRegistry...");
     
     await deployer.deploy(MockEAS);
     await deployer.deploy(MockSchemaRegistry);
