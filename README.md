@@ -1,4 +1,4 @@
-# 🎓 CertETH - Sistema de Certificados Descentralizado con ZK + EAS
+# 🎓 CertETH - Sistema de Certificados Descentralizado con ZK + EAS + NOIR
 
 ## 📋 Descripción General
 
