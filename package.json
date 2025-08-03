@@ -1,45 +1,51 @@
 {
-  "name": "certeth",
-  "version": "1.0.0",
-  "description": "Sistema descentralizado de certificados académicos y profesionales usando blockchain",
-  "main": "truffle-config.js",
-  "scripts": {
-    "test": "truffle test",
-    "compile": "truffle compile",
-    "migrate": "truffle migrate",
-    "migrate:reset": "truffle migrate --reset",
-    "deploy:local": "truffle migrate --reset --network development",
-    "console": "truffle console",
-    "lint": "solhint 'contracts/**/*.sol'",
-    "coverage": "truffle run coverage"
-  },
-  "keywords": [
-    "blockchain",
-    "ethereum",
-    "solidity",
-    "certificates",
-    "verification",
-    "zero-knowledge",
-    "eas",
-    "smart-contracts",
-    "truffle"
-  ],
-  "author": "Tu Nombre",
-  "license": "MIT",
-  "devDependencies": {
-    "@truffle/hdwallet-provider": "^2.1.15",
-    "solhint": "^4.0.0",
-    "truffle": "^5.11.5"
-  },
-  "dependencies": {
-    "dotenv": "^16.3.1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/yourusername/certeth.git"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/certeth/issues"
-  },
-  "homepage": "https://github.com/yourusername/certeth#readme"
+	"name": "certeth",
+	"version": "1.0.0",
+	"description": "Sistema descentralizado de certificados académicos y profesionales usando blockchain",
+	"main": "truffle-config.js",
+	"scripts": {
+		"test": "truffle test",
+		"compile": "truffle compile",
+		"migrate": "truffle migrate",
+		"migrate:reset": "truffle migrate --reset",
+		"deploy:local": "truffle migrate --reset --network development",
+		"console": "truffle console",
+		"lint": "solhint 'contracts/**/*.sol'",
+		"coverage": "truffle run coverage",
+		"frontend:install": "cd frontend && npm install",
+		"frontend:dev": "cd frontend && npm run dev",
+		"frontend:build": "cd frontend && npm run build",
+		"frontend:setup": "cd frontend && ./setup.sh",
+		"dev": "npm run frontend:dev",
+		"setup:all": "npm install && npm run frontend:install && npm run compile"
+	},
+	"keywords": [
+		"blockchain",
+		"ethereum",
+		"solidity",
+		"certificates",
+		"verification",
+		"zero-knowledge",
+		"eas",
+		"smart-contracts",
+		"truffle"
+	],
+	"author": "Tu Nombre",
+	"license": "MIT",
+	"devDependencies": {
+		"@truffle/hdwallet-provider": "^2.1.15",
+		"solhint": "^4.0.0",
+		"truffle": "^5.11.5"
+	},
+	"dependencies": {
+		"dotenv": "^16.3.1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/yourusername/certeth.git"
+	},
+	"bugs": {
+		"url": "https://github.com/yourusername/certeth/issues"
+	},
+	"homepage": "https://github.com/yourusername/certeth#readme"
 }
